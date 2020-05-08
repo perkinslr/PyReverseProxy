@@ -1,0 +1,62 @@
+diff -r ./core/ngx_connection.h /root/nginx-1.14.0/src/core/ngx_connection.h
+63a64
+>     unsigned            reverse_proxy:1;
+diff -r ./event/ngx_event_accept.c /root/nginx-1.14.0/src/event/ngx_event_accept.c
+38a39,47
+> 
+>     int len;
+>     ngx_socket_t fd;
+>     char buf[1];
+>     struct iovec iov;
+>     struct msghdr msg;
+>     struct cmsghdr *cmsg;
+>     char cms[CMSG_SPACE(sizeof(int))];
+> 
+72a82,108
+>         if (s > ((ngx_socket_t) -1) && ls->reverse_proxy) {
+>             iov.iov_base = buf;
+>             iov.iov_len = sizeof(buf);
+>             msg.msg_name = 0;
+>             msg.msg_namelen = 0;
+>             msg.msg_iov = &iov;
+>             msg.msg_iovlen = 1;
+>             msg.msg_flags = 0;
+>             msg.msg_control = (caddr_t) cms;
+>             msg.msg_controllen = sizeof cms;
+>             len = recvmsg(s, &msg, 0);
+>             if (len < 0) {
+>                 ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ev->log, err, "recvmsg failed");
+>                 close(s);
+>                 return;
+>             }
+>             
+>             if (len == 0) {
+>                 ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ev->log, err, "recvmsg failed: no data");
+>                 close (s);
+>                 return;
+>             }
+>             cmsg = CMSG_FIRSTHDR(&msg);
+>             memmove(&fd, CMSG_DATA(cmsg), sizeof(int));
+>             s = fd;
+>         }
+>         
+diff -r ./http/ngx_http.c /root/nginx-1.14.0/src/http/ngx_http.c
+1712a1713
+>     ls->reverse_proxy = addr->opt.reverse_proxy;
+diff -r ./http/ngx_http_core_module.c /root/nginx-1.14.0/src/http/ngx_http_core_module.c
+3803a3804,3808
+>         
+>         if (ngx_strcmp(value[n].data, "reverse_proxy") == 0) {
+>             lsopt.reverse_proxy = 1;
+>             continue;
+>         }
+diff -r ./http/ngx_http_core_module.h /root/nginx-1.14.0/src/http/ngx_http_core_module.h
+83a84
+>     unsigned                   reverse_proxy:1;
+104a106
+>     
+diff -r ./stream/ngx_stream_core_module.c /root/nginx-1.14.0/src/stream/ngx_stream_core_module.c
+51d50
+< 
+565d563
+< 
