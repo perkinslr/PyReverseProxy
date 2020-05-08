@@ -88,25 +88,30 @@ extern "C" {
     if (addr->sa_family != AF_INET) {
       return fbind(sockfd, addr, addrlen);
     }
-    
     std::string reroute{""};
-    const char *prefix = getenv("REVERSE_PROXY_PREFIX");
-    if (!prefix) {
-      prefix = "/run/ReverseProxy/tcp";
+    const char *port = getenv("REVERSE_PROXY_PORT");
+    if (port) {
+      reroute += port;
     }
+    else {
+      const char *prefix = getenv("REVERSE_PROXY_PREFIX");
+      if (!prefix) {
+	prefix = "/run/ReverseProxy/tcp";
+      }
     
-    reroute += prefix;
-    const struct sockaddr_in *ipaddr = reinterpret_cast<const struct sockaddr_in*> (addr);
+      reroute += prefix;
+      const struct sockaddr_in *ipaddr = reinterpret_cast<const struct sockaddr_in*> (addr);
 
-    std::string port = preload::n2hexstr(ipaddr->sin_port);
-    std::string address = preload::n2hexstr(ipaddr->sin_addr.s_addr);
+      std::string port = preload::n2hexstr(ipaddr->sin_port);
+      std::string address = preload::n2hexstr(ipaddr->sin_addr.s_addr);
 
-    reroute += "/" + address + "/" + port;
-    printf("making dir: %s\n", reroute.c_str());
+      reroute += "/" + address + "/" + port;
+      printf("making dir: %s\n", reroute.c_str());
 
-    std::string mkd = "mkdir -p " + reroute;
-    system(mkd.c_str());
-    reroute += "/proxy.sock";
+      std::string mkd = "mkdir -p " + reroute;
+      system(mkd.c_str());
+      reroute += "/proxy.sock";
+    }
 
     struct sockaddr_un uaddr{};
     uaddr.sun_family = AF_UNIX;
