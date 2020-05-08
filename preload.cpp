@@ -4,7 +4,7 @@ import dl;
 import inet;
 import un;
 import stat;
-
+import unistd;
 
 
 
@@ -132,7 +132,9 @@ extern "C" {
     if (cfd < 0) {
       return cfd;
     }
-    return preload::recvFD(cfd, addr, addrlen);
+    int r = preload::recvFD(cfd, addr, addrlen);
+    close(cfd);
+    return r;
   }
 
 
