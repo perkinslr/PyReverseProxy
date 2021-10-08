@@ -3,6 +3,7 @@ from twisted.internet.protocol import Protocol
 from zope.interface import implementer
 
 import socket
+import os
 
 from .. import reactor
 from ..parsers import is_ssl
@@ -17,16 +18,23 @@ class FDReceiverProtocol(Protocol):
 
     def fileDescriptorReceived(self, descriptor):
         # Record the descriptor sent to us
-        self.descriptor = descriptor
-        sock = socket.fromfd(descriptor, socket.AF_INET, socket.SOCK_STREAM)
         try:
-            peek = sock.recv(1024, socket.MSG_PEEK)
-        finally:
+          sock = socket.fromfd(descriptor, socket.AF_INET, socket.SOCK_STREAM)
+          try:
+              peek = sock.recv(1024, socket.MSG_PEEK)
+          finally:
             sock.close()
 
-        if is_ssl(peek) and self.conf.tlsFactory:
-            reactor.adoptStreamConnection(descriptor, socket.AF_INET, self.conf.tlsFactory)
+            if is_ssl(peek) and self.conf.tlsFactory:
+                try:
+                    reactor.adoptStreamConnection(descriptor, socket.AF_INET, self.conf.tlsFactory)
+                except TypeError:
+                    reactor.adoptStreamConnection(descriptor, socket.AF_INET6, self.conf.tlsFactory)
 
-        else:
-            reactor.adoptStreamConnection(descriptor, socket.AF_INET, self.conf.factory)
-
+            else:
+                try:
+                    reactor.adoptStreamConnection(descriptor, socket.AF_INET, self.conf.factory)
+                except TypeError:
+                    reactor.adoptStreamConnection(descriptor, socket.AF_INET6, self.conf.factory)
+        finally:
+            os.close(descriptor)
